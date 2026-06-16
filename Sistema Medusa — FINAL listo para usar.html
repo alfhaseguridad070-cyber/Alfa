@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sistema Medusa</title>
+<style>
+  :root{--azul:#1a73e8;--azul-dark:#1557b0;--verde:#34a853;--rojo:#ea4335;--naranja:#fbbc04;--gris:#f8f9fa;--morado:#6200ea;--texto:#202124;--borde:#dadce0;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',sans-serif;background:#e8eaf6;color:var(--texto);min-height:100vh;}
+
+  /* SPLASH */
+  #splash{position:fixed;inset:0;z-index:999;background:linear-gradient(180deg,#0d0500 0%,#2a0f00 45%,#0d0500 100%);display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;overflow:hidden;}
+  .splash-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(251,188,4,.4) 0%,transparent 70%);animation:pulseGlow 2s ease-in-out infinite;}
+  @keyframes pulseGlow{0%,100%{opacity:.6}50%{opacity:1}}
+  .bolt{position:absolute;width:2px;background:linear-gradient(180deg,transparent,#fbbc04,transparent);opacity:0;animation:bolt 4s ease-in-out infinite;}
+  .bolt:nth-child(1){left:18%;height:32%;top:4%;animation-delay:0s;}
+  .bolt:nth-child(2){left:78%;height:25%;top:8%;animation-delay:1.6s;}
+  .bolt:nth-child(3){left:50%;height:18%;top:1%;animation-delay:3s;}
+  @keyframes bolt{0%,100%{opacity:0}10%{opacity:.95}20%{opacity:0}28%{opacity:.5}36%{opacity:0}}
+  .splash-content{position:relative;z-index:2;text-align:center;padding:70px 24px 0;}
+  .splash-emoji{font-size:82px;display:block;filter:drop-shadow(0 0 28px #fbbc04);animation:float 3s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  .splash-title{font-size:44px;font-weight:900;letter-spacing:5px;background:linear-gradient(135deg,#fbbc04,#ff6d00,#fbbc04);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:14px;}
+  .splash-sub{color:rgba(255,255,255,.7);font-size:12px;letter-spacing:3px;margin-top:4px;text-transform:uppercase;}
+  .splash-divider{width:60px;height:2px;background:linear-gradient(90deg,transparent,#fbbc04,transparent);margin:14px auto;}
+  .splash-lema{color:#fbbc04;font-size:14px;font-weight:700;letter-spacing:1px;text-shadow:0 0 20px rgba(251,188,4,.8);}
+  .splash-bottom{position:relative;z-index:2;padding:28px 24px;text-align:center;width:100%;}
+  .splash-jerarquia{color:rgba(255,255,255,.55);font-size:12px;line-height:2.2;margin-bottom:18px;}
+  .splash-jerarquia strong{color:rgba(251,188,4,.9);}
+  .splash-tap{color:rgba(255,255,255,.4);font-size:13px;animation:blink 1.4s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+
+  /* HEADER */
+  .header{background:var(--azul);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  .header-top{display:flex;align-items:center;gap:10px;}
+  .header h1{font-size:17px;font-weight:700;}
+  .header p{font-size:11px;opacity:.85;margin-top:2px;}
+  .offline-badge{display:none;background:var(--naranja);color:#000;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:6px;}
+  .offline-badge.show{display:inline-block;}
+  .pending-badge{display:none;background:#fff;color:var(--azul);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:6px;cursor:pointer;}
+  .pending-badge.show{display:inline-block;}
+
+  .card{background:#fff;border-radius:12px;margin:14px;padding:18px;box-shadow:0 1px 6px rgba(0,0,0,.1);}
+  .card h2{font-size:14px;font-weight:600;color:var(--azul);margin-bottom:12px;}
+  label{display:block;font-size:12px;font-weight:600;color:#5f6368;margin-bottom:4px;margin-top:12px;}
+  select,input[type=text]{width:100%;padding:12px;border:1.5px solid var(--borde);border-radius:8px;font-size:15px;background:#fff;appearance:none;}
+  select:focus,input:focus{outline:none;border-color:var(--azul);}
+
+  .jerarquia{background:#e8eaf6;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:12px;line-height:2.2;}
+  .jerarquia strong{color:var(--azul);}
+
+  .gps-box{border-radius:10px;padding:14px;margin-top:12px;display:flex;align-items:center;gap:12px;}
+  .gps-box.wait{background:#fff3e0;border:1.5px solid var(--naranja);}
+  .gps-box.ok{background:#e6f4ea;border:1.5px solid var(--verde);}
+  .gps-box.fail{background:#fce8e6;border:1.5px solid var(--rojo);}
+  .gps-icon{font-size:26px;}
+  .gps-text strong{display:block;font-size:14px;}
+  .gps-text{font-size:13px;line-height:1.5;}
+
+  #camSection{display:none;}
+  video{width:100%;border-radius:8px;background:#000;max-height:250px;object-fit:cover;}
+  canvas{display:none;}
+  #preview{width:100%;border-radius:8px;display:none;border:2px solid var(--verde);}
+
+  .btn{width:100%;padding:15px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px;transition:.2s;}
+  .btn-primary{background:var(--azul);color:#fff;}
+  .btn-green{background:var(--verde);color:#fff;}
+  .btn-red{background:var(--rojo);color:#fff;}
+  .btn-morado{background:var(--morado);color:#fff;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  .loader{display:none;text-align:center;padding:18px;font-size:13px;color:#5f6368;}
+  .spinner{width:34px;height:34px;border:4px solid var(--borde);border-top-color:var(--azul);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 8px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  #resultado{display:none;text-align:center;padding:28px 16px;}
+  #resultado .big-icon{font-size:60px;margin-bottom:10px;}
+  #resultado h2{font-size:20px;margin-bottom:6px;}
+  #resultado p{font-size:14px;color:#5f6368;}
+  .detalle{background:var(--gris);border-radius:10px;padding:14px;margin-top:14px;text-align:left;font-size:13px;line-height:1.9;}
+
+  #colaModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;}
+  #colaModal.show{display:flex;}
+  .cola-sheet{background:#fff;border-radius:16px 16px 0 0;width:100%;max-height:75vh;overflow-y:auto;padding:20px;}
+  .cola-sheet h3{font-size:16px;font-weight:700;margin-bottom:14px;}
+  .cola-item{background:var(--gris);border-radius:8px;padding:12px;margin-bottom:10px;font-size:13px;line-height:1.7;position:relative;}
+  .cola-item .ts{font-size:11px;color:#5f6368;}
+  .cola-status{position:absolute;top:10px;right:10px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .status-pend{background:#fff3e0;color:#e37400;}
+  .status-ok{background:#e6f4ea;color:var(--verde);}
+  .status-err{background:#fce8e6;color:var(--rojo);}
+  .small{font-size:12px;color:#5f6368;margin-top:6px;}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" onclick="cerrarSplash()">
+  <div class="splash-glow"></div>
+  <div class="bolt"></div><div class="bolt"></div><div class="bolt"></div>
+  <div class="splash-content">
+    <span class="splash-emoji">🪼</span>
+    <div class="splash-title">MEDUSA</div>
+    <div class="splash-sub">Sistema de Asistencia</div>
+    <div class="splash-divider"></div>
+    <div class="splash-lema">NO SE CUESTIONA · SE OBEDECE</div>
+  </div>
+  <div class="splash-bottom">
+    <div class="splash-jerarquia">
+      <strong>👑 Directora General:</strong> Comandanta<br>
+      <strong>⚙️ Coordinador:</strong> Santiago
+    </div>
+    <div class="splash-tap">▼ Toca para entrar ▼</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <span style="font-size:26px;">🪼</span>
+    <div><h1>Sistema Medusa</h1><p>Control de Asistencia — Mantenimiento</p></div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+    <span class="offline-badge" id="offlineBadge">⚡ SIN RED — Guardando local</span>
+    <span class="pending-badge" id="pendingBadge" onclick="abrirCola()">📤 <span id="pendingCount">0</span> pendientes</span>
+  </div>
+</div>
+
+<!-- FORM -->
+<div id="formSection">
+  <div class="card">
+    <h2>👤 Datos del Trabajador</h2>
+    <div class="jerarquia">
+      <strong>👑 Directora General:</strong> Comandanta<br>
+      <strong>⚙️ Coordinador:</strong> Santiago
+    </div>
+    <label>Condominio / Lugar</label>
+    <select id="lugar">
+      <option value="">— Selecciona —</option>
+      <optgroup label="🔧 Mantenimiento">
+        <option value="Condominio Aira|JURIQUILLA">Condominio Aira — Juriquilla</option>
+        <option value="Condominio Serena|ALTOS JURIQUILLA">Condominio Serena — Altos Juriquilla</option>
+        <option value="Kaoba|JURIQUILLA">Kaoba — Juriquilla</option>
+        <option value="Condominio Niebla|ALTOZANO">Condominio Niebla — Altozano</option>
+        <option value="Distrito Sabino|ZAKIA">Distrito Sabino — Zakia</option>
+        <option value="Coto Madrid|EL PUEBLITO">Coto Madrid — El Pueblito</option>
+        <option value="Coto 2|EL PUEBLITO">Coto 2 — El Pueblito</option>
+      </optgroup>
+      <optgroup label="🔒 Seguridad 12 hrs">
+        <option value="Condominio Paraiso|JURIQUILLA">Condominio Paraíso — Juriquilla</option>
+      </optgroup>
+    </select>
+    <label>Nombre completo</label>
+    <input type="text" id="nombre" placeholder="Ej. Juan García López" autocomplete="name">
+    <label>ID / Número de empleado</label>
+    <input type="text" id="idEmp" placeholder="Ej. EMP-001">
+    <label>Turno</label>
+    <select id="turno">
+      <option value="Diurno 7-15h">Diurno 7–15 h</option>
+      <option value="Vespertino 15-23h">Vespertino 15–23 h</option>
+      <option value="Nocturno 23-7h">Nocturno 23–7 h</option>
+    </select>
+    <label>Tipo de registro</label>
+    <select id="tipoReg">
+      <option value="ENTRADA">Entrada</option>
+      <option value="SALIDA">Salida</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <h2>🛰️ Verificación GPS</h2>
+    <div class="gps-box wait" id="gpsBox">
+      <div class="gps-icon">📡</div>
+      <div class="gps-text"><strong>Obteniendo ubicación…</strong>Activa el GPS del celular</div>
+    </div>
+    <p class="small">Debes estar a ≤ 100 m del sitio para registrar.</p>
+  </div>
+
+  <div class="card" id="camSection">
+    <h2>📷 Foto de evidencia</h2>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <img id="preview" alt="Foto capturada">
+    <button class="btn btn-primary" id="btnFoto" style="margin-top:10px">📸 Tomar foto</button>
+    <button class="btn btn-red" id="btnRetomar" style="display:none;margin-top:10px">🔄 Retomar</button>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-green" id="btnRegistrar" disabled>✅ Registrar Asistencia</button>
+    <div class="loader" id="loader"><div class="spinner"></div>Enviando registro…</div>
+  </div>
+</div>
+
+<!-- RESULTADO -->
+<div class="card" id="resultado">
+  <div class="big-icon" id="resIcon">✅</div>
+  <h2 id="resTitulo"></h2>
+  <p id="resSubtitulo"></p>
+  <div class="detalle" id="resDetalle"></div>
+  <button class="btn btn-primary" id="btnNuevo" style="margin-top:14px">+ Nuevo registro</button>
+</div>
+
+<!-- COLA MODAL -->
+<div id="colaModal">
+  <div class="cola-sheet">
+    <h3>📤 Registros pendientes</h3>
+    <div id="colaList"></div>
+    <button class="btn btn-morado" id="btnSubirAhora" style="margin-top:6px">⬆️ Subir todos ahora</button>
+    <button class="btn btn-primary" onclick="cerrarCola()" style="margin-top:8px">Cerrar</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIGURACIÓN
+// ══════════════════════════════════════════════
+const SHEETDB_URL = "https://sheetdb.io/api/v1/bw6fzejgso0xb";
+const RADIO_MAX   = 100;
+const QUEUE_KEY   = "medusa_queue";
+
+const SITIOS = {
+  "Condominio Aira|JURIQUILLA":      {lat:20.662201, lng:-100.434142},
+  "Condominio Serena|ALTOS JURIQUILLA": {lat:20.691047, lng:-100.466576},
+  "Kaoba|JURIQUILLA":                {lat:20.687891, lng:-100.454646},
+  "Condominio Niebla|ALTOZANO":      {lat:20.674399, lng:-100.395807},
+  "Distrito Sabino|ZAKIA":           {lat:20.661137, lng:-100.320008},
+  "Coto Madrid|EL PUEBLITO":         {lat:20.5980,   lng:-100.4120},
+  "Coto 2|EL PUEBLITO":              {lat:20.5975,   lng:-100.4115},
+  "Condominio Paraiso|JURIQUILLA":   {lat:20.7177658,lng:-100.4462585},
+};
+
+// ══════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════
+let userLat=null,userLng=null,distancia=null,fotoDataUrl=null,streamCam=null,gpsOk=false;
+let isOnline=navigator.onLine;
+
+// ══════════════════════════════════════════════
+// SPLASH
+// ══════════════════════════════════════════════
+function cerrarSplash(){
+  const s=document.getElementById('splash');
+  s.style.transition='opacity .5s';
+  s.style.opacity='0';
+  setTimeout(()=>s.style.display='none',500);
+}
+
+// ══════════════════════════════════════════════
+// RED
+// ══════════════════════════════════════════════
+function updateNet(){
+  isOnline=navigator.onLine;
+  document.getElementById('offlineBadge').classList.toggle('show',!isOnline);
+  if(isOnline) subirPendientes();
+}
+window.addEventListener('online',updateNet);
+window.addEventListener('offline',updateNet);
+updateNet();
+
+// ══════════════════════════════════════════════
+// COLA OFFLINE
+// ══════════════════════════════════════════════
+function getQueue(){try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');}catch{return[];}}
+function saveQueue(q){localStorage.setItem(QUEUE_KEY,JSON.stringify(q));}
+function addToQueue(p){const q=getQueue();q.push({...p,_qid:Date.now(),_status:'pending'});saveQueue(q);updatePendingBadge();}
+function updatePendingBadge(){
+  const n=getQueue().filter(r=>r._status==='pending').length;
+  document.getElementById('pendingCount').textContent=n;
+  document.getElementById('pendingBadge').classList.toggle('show',n>0);
+}
+
+async function subirPendientes(){
+  const q=getQueue();let cambios=false;
+  for(let i=0;i<q.length;i++){
+    if(q[i]._status!=='pending') continue;
+    try{
+      const r=await enviarSheetDB(q[i]);
+      q[i]._status=r?'ok':'error';
+      cambios=true;
+    }catch{}
+  }
+  if(cambios){saveQueue(q);updatePendingBadge();renderCola();}
+}
+
+function abrirCola(){renderCola();document.getElementById('colaModal').classList.add('show');}
+function cerrarCola(){document.getElementById('colaModal').classList.remove('show');}
+function renderCola(){
+  const q=getQueue(),el=document.getElementById('colaList');
+  if(!q.length){el.innerHTML='<p style="color:#5f6368;font-size:13px">Sin registros en cola.</p>';return;}
+  el.innerHTML=q.slice().reverse().map(r=>{
+    const i={pending:'⏳',ok:'✅',error:'❌'},l={pending:'Pendiente',ok:'Subido',error:'Error'},c={pending:'status-pend',ok:'status-ok',error:'status-err'};
+    return`<div class="cola-item"><span class="cola-status ${c[r._status]}">${i[r._status]} ${l[r._status]}</span><strong>${r.Nombre}</strong> — ${r.Condominio}<br>${r.Tipo} · ${r.Turno}<br><span class="ts">${r.Fecha} ${r.Hora}</span></div>`;
+  }).join('');
+}
+document.getElementById('btnSubirAhora').addEventListener('click',async()=>{
+  const b=document.getElementById('btnSubirAhora');
+  b.disabled=true;b.textContent='⏳ Subiendo…';
+  await subirPendientes();
+  b.disabled=false;b.textContent='⬆️ Subir todos ahora';
+});
+updatePendingBadge();
+
+// ══════════════════════════════════════════════
+// SHEETDB
+// ══════════════════════════════════════════════
+async function enviarSheetDB(data){
+  // SheetDB espera { data: { col: val } }
+  const body={data:[{
+    Timestamp:  data.Timestamp,
+    Fecha:      data.Fecha,
+    Hora:       data.Hora,
+    Nombre:     data.Nombre,
+    ID:         data.ID,
+    Zona:       data.Zona,
+    Condominio: data.Condominio,
+    Turno:      data.Turno,
+    Tipo:       data.Tipo,
+    Latitud:    data.Latitud,
+    Longitud:   data.Longitud,
+    Distancia:  data.Distancia,
+    Estado:     data.Estado,
+    Supervisor: data.Supervisor,
+    Directora:  data.Directora
+    // Foto no se envía a SheetDB (muy pesada) — se guarda local
+  }]};
+  const res=await fetch(SHEETDB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const json=await res.json();
+  return json.created===1||json.created>0;
+}
+
+// ══════════════════════════════════════════════
+// GPS
+// ══════════════════════════════════════════════
+function hav(a,b,c,d){const R=6371000,r=Math.PI/180,dL=(c-a)*r,dl=(d-b)*r,x=Math.sin(dL/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dl/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+function iniciarGPS(){
+  if(!navigator.geolocation){setGPS('fail','GPS no disponible','El dispositivo no lo soporta');return;}
+  navigator.geolocation.watchPosition(pos=>{
+    userLat=pos.coords.latitude;userLng=pos.coords.longitude;evaluarDistancia();
+  },err=>setGPS('fail','Error GPS',err.message),{enableHighAccuracy:true,maximumAge:10000});
+}
+
+function evaluarDistancia(){
+  const lugar=document.getElementById('lugar').value;
+  if(!lugar||!SITIOS[lugar]){setGPS('wait','Selecciona el condominio','para verificar tu distancia');return;}
+  const s=SITIOS[lugar];
+  distancia=hav(userLat,userLng,s.lat,s.lng);
+  if(distancia<=RADIO_MAX){setGPS('ok',`✅ Ubicación válida`,`A ${distancia.toFixed(0)} m del sitio`);gpsOk=true;iniciarCamara();}
+  else{setGPS('fail',`❌ Fuera de rango`,`Estás a ${distancia.toFixed(0)} m — máximo ${RADIO_MAX} m`);gpsOk=false;}
+  actualizarBoton();
+}
+
+function setGPS(t,titulo,desc){
+  const b=document.getElementById('gpsBox');b.className=`gps-box ${t}`;
+  const i={wait:'📡',ok:'✅',fail:'❌'};
+  b.innerHTML=`<div class="gps-icon">${i[t]}</div><div class="gps-text"><strong>${titulo}</strong>${desc}</div>`;
+}
+
+// ══════════════════════════════════════════════
+// CÁMARA
+// ══════════════════════════════════════════════
+async function iniciarCamara(){
+  document.getElementById('camSection').style.display='block';
+  if(streamCam) return;
+  try{streamCam=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});document.getElementById('video').srcObject=streamCam;}
+  catch{document.getElementById('camSection').querySelector('h2').textContent='📷 Cámara no disponible';}
+}
+
+document.getElementById('btnFoto').addEventListener('click',()=>{
+  const v=document.getElementById('video'),cv=document.getElementById('canvas'),pr=document.getElementById('preview');
+  cv.width=v.videoWidth||640;cv.height=v.videoHeight||480;
+  const ctx=cv.getContext('2d');ctx.drawImage(v,0,0,cv.width,cv.height);
+  const now=new Date(),ts=now.toLocaleString('es-MX',{dateStyle:'short',timeStyle:'medium'}),lugar=document.getElementById('lugar').value.split('|')[0]||'';
+  ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,cv.height-44,cv.width,44);
+  ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
+  ctx.fillText(`${ts}  |  ${lugar}  |  ${distancia?.toFixed(0)??'?'} m`,10,cv.height-14);
+  fotoDataUrl=cv.toDataURL('image/jpeg',.75);
+  pr.src=fotoDataUrl;pr.style.display='block';v.style.display='none';
+  document.getElementById('btnFoto').style.display='none';
+  document.getElementById('btnRetomar').style.display='block';
+  actualizarBoton();
+});
+
+document.getElementById('btnRetomar').addEventListener('click',()=>{
+  fotoDataUrl=null;
+  document.getElementById('preview').style.display='none';
+  document.getElementById('video').style.display='block';
+  document.getElementById('btnFoto').style.display='block';
+  document.getElementById('btnRetomar').style.display='none';
+  actualizarBoton();
+});
+
+// ══════════════════════════════════════════════
+// VALIDACIÓN
+// ══════════════════════════════════════════════
+function actualizarBoton(){
+  const ok=gpsOk&&fotoDataUrl&&document.getElementById('nombre').value.trim()&&document.getElementById('idEmp').value.trim()&&document.getElementById('lugar').value;
+  document.getElementById('btnRegistrar').disabled=!ok;
+}
+['nombre','idEmp','lugar','turno','tipoReg'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{if(id==='lugar')evaluarDistancia();actualizarBoton();}));
+
+// ══════════════════════════════════════════════
+// REGISTRO
+// ══════════════════════════════════════════════
+document.getElementById('btnRegistrar').addEventListener('click',async()=>{
+  const nombre=document.getElementById('nombre').value.trim();
+  const id=document.getElementById('idEmp').value.trim();
+  const lugar=document.getElementById('lugar').value;
+  const zona=lugar.split('|')[1]||'',condo=lugar.split('|')[0]||'';
+  const turno=document.getElementById('turno').value;
+  const tipo=document.getElementById('tipoReg').value;
+  const now=new Date();
+
+  document.getElementById('btnRegistrar').disabled=true;
+  document.getElementById('loader').style.display='block';
+
+  const payload={
+    Timestamp:  now.toISOString(),
+    Fecha:      now.toLocaleDateString('es-MX'),
+    Hora:       now.toLocaleTimeString('es-MX'),
+    Nombre:     nombre, ID: id, Zona: zona, Condominio: condo,
+    Turno:      turno, Tipo: tipo,
+    Latitud:    userLat?.toFixed(6), Longitud: userLng?.toFixed(6),
+    Distancia:  distancia?.toFixed(1),
+    Estado:     'OK', Supervisor:'Santiago', Directora:'Comandanta'
+  };
+
+  document.getElementById('loader').style.display='none';
+
+  if(!isOnline){addToQueue(payload);mostrarResultado('offline',nombre,condo,tipo,now);return;}
+
+  try{
+    const ok=await enviarSheetDB(payload);
+    if(ok) mostrarResultado('ok',nombre,condo,tipo,now);
+    else{addToQueue(payload);mostrarResultado('guardado',nombre,condo,tipo,now);}
+  }catch{addToQueue(payload);mostrarResultado('guardado',nombre,condo,tipo,now);}
+});
+
+function mostrarResultado(modo,nombre,condo,tipo,fecha){
+  document.getElementById('formSection').style.display='none';
+  document.getElementById('resultado').style.display='block';
+  const cfg={
+    ok:      {icon:'✅',titulo:'Registro enviado',sub:'Guardado en Google Sheets ✓'},
+    offline: {icon:'📴',titulo:'Sin red — guardado local',sub:'Se subirá automáticamente cuando haya conexión'},
+    guardado:{icon:'⚠️',titulo:'Error de red — guardado local',sub:'Se reintentará cuando haya conexión'},
+  };
+  const c=cfg[modo];
+  document.getElementById('resIcon').textContent=c.icon;
+  document.getElementById('resTitulo').textContent=c.titulo;
+  document.getElementById('resSubtitulo').textContent=c.sub;
+  document.getElementById('resDetalle').innerHTML=`
+    <b>Empleado:</b> ${nombre}<br>
+    <b>Condominio:</b> ${condo}<br>
+    <b>Tipo:</b> ${tipo}<br>
+    <b>Hora:</b> ${fecha.toLocaleTimeString('es-MX')}<br>
+    <b>Fecha:</b> ${fecha.toLocaleDateString('es-MX')}
+  `;
+}
+
+document.getElementById('btnNuevo').addEventListener('click',()=>{
+  fotoDataUrl=null;gpsOk=false;distancia=null;streamCam=null;
+  ['nombre','idEmp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lugar').value='';
+  document.getElementById('resultado').style.display='none';
+  document.getElementById('formSection').style.display='block';
+  document.getElementById('camSection').style.display='none';
+  document.getElementById('preview').style.display='none';
+  document.getElementById('video').style.display='block';
+  document.getElementById('btnFoto').style.display='block';
+  document.getElementById('btnRetomar').style.display='none';
+  document.getElementById('loader').style.display='none';
+  document.getElementById('btnRegistrar').disabled=true;
+  setGPS('wait','Obteniendo ubicación…','Activa el GPS del celular');
+  iniciarGPS();updatePendingBadge();
+});
+
+// ARRANQUE
+iniciarGPS();
+if(isOnline) subirPendientes();
+setInterval(()=>{if(isOnline)subirPendientes();},120000);
+</script>
+</body>
+</html>
